@@ -1,0 +1,46 @@
+
+services:
+  db:
+    image: postgres:17.2
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+  
+  cache:
+   image: redis:7.2.4
+   restart: always
+   volumes:
+     - ./data/cache:/data
+  
+
+  web:
+    build: .
+    command: ["sh", "-c", "./wait-for-it.sh db:5432","uwsgi", "--ini", "/code/config/uwsgi/uwsgi.ini"]
+    restart: always
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: onlinelearner.settings.prod
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    depends_on:
+      - db
+      - cache
+  nginx:
+    image: nginx:1.25.5
+    restart: always
+    volumes:
+      - ./config/nginx:/etc/nginx/templates
+      - .:/code
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:
